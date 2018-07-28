@@ -1,7 +1,6 @@
-from functools import partial
-
 import pandas as pd
 import gc
+from functools import partial
 from utils import *
 
 
@@ -16,9 +15,9 @@ class InstallmentPayments:
     self.num_workers = 3
 
   def execute(self):
-    self.preprocess()
     self.clean()
-    self.handcrafted()
+    self.preprocess()
+    self.handcrafted()     # this alone creates 239 features
     self.aggregations()
 
     del self.ip
@@ -48,7 +47,6 @@ class InstallmentPayments:
                  agg_periods=self.last_k_agg_periods,
                  period_fractions=self.last_k_agg_period_fractions,
                  trend_periods=self.last_k_trend_periods)
-    # this alone creates 239 features
     features = parallel_apply(groupby, func, index_name='SK_ID_CURR', num_workers=self.num_workers).reset_index()
     self.df = self.df.merge(features, on='SK_ID_CURR', how='left')
 
@@ -77,11 +75,11 @@ class InstallmentPayments:
 
   @staticmethod
   def generate_features(gr, agg_periods, trend_periods, period_fractions):
-    all = InstallmentPayments.all_installment_features(gr)
+    all_installment_features = InstallmentPayments.all_installment_features(gr)
     agg = InstallmentPayments.last_k_installment_features_with_fractions(gr, agg_periods, period_fractions)
     trend = InstallmentPayments.trend_in_last_k_installment_features(gr, trend_periods)
     last = InstallmentPayments.last_loan_features(gr)
-    features = {**all, **agg, **trend, **last}
+    features = {**all_installment_features, **agg, **trend, **last}
     return pd.Series(features)
 
   @staticmethod
