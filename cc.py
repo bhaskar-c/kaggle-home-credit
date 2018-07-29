@@ -14,6 +14,7 @@ class CreditCard:
     self.clean()
     self.static_features()
     self.dynamic_features()
+    self.aggregations()
     for col in list(self.df):
       if col != 'SK_ID_CURR':
         self.df.rename(columns={col: 'CC_'+ col}, inplace=True)
@@ -90,5 +91,5 @@ class CreditCard:
     cc_g = self.cc.groupby('SK_ID_CURR').agg(cc_aggregations)
     cc_g.columns = pd.Index([e[0] + "_" + e[1].upper() for e in cc_g.columns.tolist()])
     cc_g['SK_ID_CURR'] = cc_g.index
-    cc_g['CC_COUNT'] = cc.groupby('SK_ID_CURR').size()      # Count credit card lines
+    cc_g['CC_COUNT'] = self.cc.groupby('SK_ID_CURR').size()      # Count credit card lines
     self.df = self.df.merge(cc_g, on=['SK_ID_CURR'], how='left')

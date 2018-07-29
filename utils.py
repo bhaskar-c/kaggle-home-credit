@@ -6,13 +6,15 @@ import multiprocessing as mp
 import sys
 from tqdm import tqdm
 
+
+
 def quantile_cut(ds, ncut = 20):
   return pd.qcut(ds, ncut, labels=range(1, ncut+1))
 
 
 def read_data(file_name, debug=True, num_rows=200):
     if debug:
-      print('reading from csv')
+      #print('reading from csv')
       path = '../data/'
       df = pd.read_csv(path+file_name + '.csv', nrows= num_rows)
     else:
@@ -53,8 +55,8 @@ def reduce_mem_usage(df):
             df[col] = df[col].astype('category')
 
     end_mem = df.memory_usage().sum() / 1024**2
-    print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
-    print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
+    #print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
+    #print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
     return df
 
 

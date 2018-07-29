@@ -12,7 +12,7 @@ class InstallmentPayments:
     self.last_k_agg_periods = [1, 5, 10, 20, 50, 100]
     self.last_k_agg_period_fractions = [(5, 20), (5, 50), (10, 50), (10, 100), (20, 100)]
     self.last_k_trend_periods = [10, 50, 100, 500]
-    self.num_workers = 3
+    self.num_workers = 1
 
   def execute(self):
     self.clean()
