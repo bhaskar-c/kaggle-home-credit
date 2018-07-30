@@ -18,7 +18,7 @@ class LiteGBM:
     'early_stopping_rounds': 100, 'verbose': 1}
     self.training_params = ['number_boosting_rounds', 'early_stopping_rounds']
     self.evaluation_function = None
-    self.callbacks = callbacks(channel_prefix=name)
+    #self.callbacks = callbacks(channel_prefix=name)
     del df
     gc.collect()
     self.kfold_lightgbm()

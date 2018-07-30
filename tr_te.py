@@ -58,7 +58,7 @@ class TrainTest:
     self.df['NONLIVINGAREA_AVG'] = self.tr_te['NONLIVINGAREA_AVG']
     self.df['DAYS_LAST_PHONE_CHANGE'] = self.tr_te['DAYS_LAST_PHONE_CHANGE']
     self.df['OWN_CAR_AGE'] = self.tr_te['OWN_CAR_AGE']
-
+    self.df['FLAG_DOCUMENT_3'] = self.tr_te['FLAG_DOCUMENT_3']
 
   def handcrafted(self):
     self.df['CNT_NON_CHILD']  = self.tr_te['CNT_FAM_MEMBERS'] - self.tr_te['CNT_CHILDREN']

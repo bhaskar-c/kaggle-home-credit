@@ -15,10 +15,12 @@ def quantile_cut(ds, ncut = 20):
 def read_data(file_name, debug=True, num_rows=200):
     if debug:
       #print('reading from csv')
-      path = '../data/'
+      path = '/home/science/data/'
+      #path = '../data/'
       df = pd.read_csv(path+file_name + '.csv', nrows= num_rows)
     else:
-      path = '../hdf/'
+      path = '/home/science/data/h5/'
+      #path = '../hdf/'
       df = pd.read_hdf(path + file_name + '.h5', 'data')
     for col in list(df):
         if str(df[col].dtype) == 'category':

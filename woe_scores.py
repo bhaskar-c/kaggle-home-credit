@@ -2,19 +2,19 @@ import pandas as pd
 import math
 
 
-
 class WOEScores:
-
 
   def __init__(self, df):
     self.df = df
+    self.ids = self.df['SK_ID_CURR']
+    self.df = self.df.drop('SK_ID_CURR', 1)
     self.woe_df = pd.DataFrame()
     self.bin_the_df()
     self.woe_encoded_df()
 
-  def compute(self):
+  def append_woe_scores(self):
     self.split_cols_tablewise_and_calculate_int_score()
-    return self.df
+    return (self.df, self.woe_df)
 
 
   def split_cols_tablewise_and_calculate_int_score(self):
@@ -23,14 +23,15 @@ class WOEScores:
     ip_cols = [col for col in list(self.woe_df) if col.startswith('IP_')]
     pa_cols = [col for col in list(self.woe_df) if col.startswith('PA_')]
     pos_cols = [col for col in list(self.woe_df) if col.startswith('POS_')]
-    all_but_tr_te = b_cols + cc_cols + ip_cols + pa_cols + pos_cols
-    tr_te_cols = list(set(list(self.woe_df)) - set(all_but_tr_te))
-    self.df['INT_SCORE_B']  = self.woe_df[b_cols].sum(axis=1)
-    self.df['INT_SCORE_CC']  = self.woe_df[b_cols].sum(axis=1)
-    self.df['INT_SCORE_IP']  = self.woe_df[b_cols].sum(axis=1)
-    self.df['INT_SCORE_PA']  = self.woe_df[b_cols].sum(axis=1)
-    self.df['INT_SCORE_POS']  = self.woe_df[b_cols].sum(axis=1)
-    self.df['INT_SCORE_TR_TE']  = self.woe_df[b_cols].sum(axis=1)
+    all_but_tr_te_cols = b_cols + cc_cols + ip_cols + pa_cols + pos_cols
+    tr_te_cols = list(set(list(self.woe_df)) - set(all_but_tr_te_cols))
+    self.df['WOE_SCORE_B']  = self.woe_df[b_cols].sum(axis=1)
+    self.df['WOE_SCORE_CC']  = self.woe_df[cc_cols].sum(axis=1)
+    self.df['WOE_SCORE_IP']  = self.woe_df[ip_cols].sum(axis=1)
+    self.df['WOE_SCORE_PA']  = self.woe_df[pa_cols].sum(axis=1)
+    self.df['WOE_SCORE_POS']  = self.woe_df[pos_cols].sum(axis=1)
+    self.df['WOE_SCORE_ALL_BUT_TR_TE']  = self.woe_df[all_but_tr_te_cols].sum(axis=1)
+    self.df['WOE_SCORE_TR_TE']  = self.woe_df[tr_te_cols].sum(axis=1)
 
 
   def bin_the_df(self):
@@ -38,7 +39,10 @@ class WOEScores:
     continuous_columns = [col for col in list(self.df) if self.df[col].nunique()>20]
     for col in continuous_columns:
       z = self.df[col].copy(deep=True)
-      binned = pd.cut(z, 20)
+      try:
+        binned = pd.cut(z, 20)
+      except ValueError as e:
+        continue
       self.woe_df[col] = binned
     self.woe_df = pd.concat([self.woe_df, self.df[categorical_columns]], axis=1)
     self.woe_df['TARGET'] = df['TARGET']
@@ -57,9 +61,8 @@ class WOEScores:
             total = (self.woe_df[col] == bin_label).sum()
             good = ((self.woe_df[col] == bin_label) & (self.woe_df['TARGET'] == 0)).sum()
             good_percent = max(good / x_total_good, 1e-100) # to avoid 0 in woe calculation
-            bad = ((binned_df[col] == bin_label) & (binned_df['TARGET'] == 1)).sum()
+            bad = ((self.woe_df[col] == bin_label) & (self.woe_df['TARGET'] == 1)).sum()
             bad_percent = max(bad /x_total_bad, 1e-100) # to avoid inf in woe calculation
             woe = round(math.log(good_percent/bad_percent), 5)
             bin_woes.append(woe)
         self.woe_df[col].replace(dict(zip(bin_labels, bin_woes)), inplace= True)
-
