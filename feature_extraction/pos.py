@@ -93,7 +93,7 @@ class POSCASHBalance:
     gr_ = gr.copy()
     gr_.sort_values(['MONTHS_BALANCE'], inplace=True)
     features = {}
-    features['CNT_INSTALMENT_FUTURE_tail'] = gr_['CNT_INSTALMENT_FUTURE'].tail(1)
+    #features['CNT_INSTALMENT_FUTURE_tail'] = gr_['CNT_INSTALMENT_FUTURE'].tail(1)
     features['IS_CONTRACT_STATUS_COMPLETED_sum'] = gr_['IS_CONTRACT_STATUS_COMPLETED'].agg('sum')
     return features
 

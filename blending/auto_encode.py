@@ -29,8 +29,10 @@ def autoencoder(encoding_dim, decoding_dim, activation, X, nb_epoch):
 def main():
     # load Data
     df = pd.read_hdf('/home/gublu/Desktop/THINKSTATS/Competition/hdf/maya.h5', 'data')
-    df = df.dropna()
+    print(df.shape)
+    df = df.fillna(df.mean())
 
+    print(df.shape)
     '''# set data
     trX = [np.array(df.drop(['label', 'IS_TEST'], axis=1))]
 

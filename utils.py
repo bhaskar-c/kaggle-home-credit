@@ -2,26 +2,41 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from scipy.stats import kurtosis, iqr, skew
+from sklearn.preprocessing import LabelEncoder
 import multiprocessing as mp
 import sys
 from tqdm import tqdm
 
 
+def label_encode_it(df):
+    encode_these_columns = []
+    for col in list(df):
+        if col == 'TARGET':
+            continue
+        if str(df[col].dtype) in ['object', 'category']:
+            encode_these_columns.append(col)
+            df[col] = df[col].astype('category').cat.codes
+    print(encode_these_columns, '**********')
+    #label_encoder = LabelEncoder(cols=encode_these_columns)
+    #l_encoded =  label_encoder.fit_transform(df)
+    return df
 
 def quantile_cut(ds, ncut = 20):
   return pd.qcut(ds, ncut, labels=range(1, ncut+1))
 
 
 def read_data(file_name, debug=True, num_rows=200):
+    try:
+        path = '/home/science/data/'
+        store = pd.HDFStore(path + file_name + '.h5')
+    except OSError as e:
+        path = '/home/gublu/Desktop/THINKSTATS/Competition/hdf/'
+        store = pd.HDFStore(path + file_name + '.h5')
     if debug:
-      #print('reading from csv')
-      path = '/home/science/data/'
-      #path = '../data/'
-      df = pd.read_csv(path+file_name + '.csv', nrows= num_rows)
+      df = store['data'].iloc[:num_rows, :]
     else:
-      path = '/home/science/data/h5/'
-      #path = '../hdf/'
-      df = pd.read_hdf(path + file_name + '.h5', 'data')
+      df = store['data']
+      #df = pd.read_hdf(path + file_name + '.h5', 'data')
     for col in list(df):
         if str(df[col].dtype) == 'category':
             df[col] = df[col].astype('object')
