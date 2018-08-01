@@ -8,6 +8,19 @@ import sys
 from tqdm import tqdm
 
 
+def one_hot_encode_it(df, nan_as_category = False, exclude_columns=[]):
+    encode_these_coumns = []
+    for col in df:
+        if col == 'TARGET':
+            continue
+        x = df[col].nunique()
+        if (2 <= x <= 4):
+            encode_these_coumns.append(col)
+    encode_these_coumns = list(set(encode_these_coumns) - set(exclude_columns))
+    df = pd.get_dummies(df, columns= encode_these_coumns, dummy_na= nan_as_category)
+    return df
+
+
 def label_encode_it(df):
     encode_these_columns = []
     for col in list(df):
@@ -25,7 +38,22 @@ def quantile_cut(ds, ncut = 20):
   return pd.qcut(ds, ncut, labels=range(1, ncut+1))
 
 
-def read_data(file_name, debug=True, num_rows=200):
+def read_csv_data(file_name, debug, server=False, num_rows=200):
+    if server:
+        path = '/home/science/data/'
+        df = pd.read_hdf(path + file_name + '.h5', 'data')
+    else:
+        path = '/home/gublu/Desktop/THINKSTATS/Competition/data/'
+        if debug:
+            df = pd.read_csv(path + file_name + '.csv', nrows=num_rows)
+        else:
+            df = pd.read_csv(path + file_name + '.csv')
+    for col in list(df):
+        if str(df[col].dtype) == 'category':
+            df[col] = df[col].astype('object')
+    return df
+
+def read_hdf_data(file_name, debug=True, num_rows=200):
     try:
         path = '/home/science/data/'
         store = pd.HDFStore(path + file_name + '.h5')

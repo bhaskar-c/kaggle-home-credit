@@ -71,13 +71,18 @@ def main():
     #scaler = StandardScaler()
     #df[['all_num_features here']] = scaler.fit_transform(df[['all_num_features here']])
     #pe(df.shape)
-    df = read_data('shiv', debug)
+    #df = read_data('shiv', debug)
+
+    train_df = read_csv_data('shiv_train', debug)
+    test_df = read_csv_data('shiv_test', debug)
+
+    print(train_df.shape, test_df.shape)
     #dt(df)
     #df = add_as_type_category(df)
     #df =reduce_mem_usage(df)
     #full_train(df, params)
     #train_test_split_run(df, params)
-    LiteGBM(df, debug= debug)
+    #LiteGBM(df, debug= debug)
     #play_on_done()
 
 if __name__ == "__main__":

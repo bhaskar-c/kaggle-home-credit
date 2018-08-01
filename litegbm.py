@@ -17,6 +17,7 @@ class LiteGBM:
     self.debug = False #debug
     #df = df.drop('NEW_LIVE_IND_SUM', 1) # giving dtypes invalid errors in lightgbm
     df = label_encode_it(df)
+    df = one_hot_encode_it(df)
     self.train_df = df[df['TARGET'].notnull()]
     self.y = self.train_df['TARGET']
     self.test_df = df[df['TARGET'].isnull()]
@@ -28,12 +29,12 @@ class LiteGBM:
     'max_depth': -1, 'num_leaves': 30, 'min_child_samples': 70, 'subsample': 1.0,
     'colsample_bytree': 0.01, 'subsample_freq': 1, 'min_gain_to_split': 0.5,
     'reg_lambda': 100, 'reg_alpha': 0.0, 'nthread': 1, 'n_estimators': 5000,
-    'early_stopping_rounds': 100, 'verbose': 1}
-    self.training_params = ['number_boosting_rounds', 'early_stopping_rounds']'''
-    self.params = {  'objective': 'binary', 'metric': 'auc','nthread': 4, 'boost_from_average':False,
-            'n_estimators':3000, 'learning_rate':0.05,
-            'max_depth': 6, 'num_leaves':32, 'max_bin': 12,
-            'feature_fraction': 0.20, 'bagging_fraction':0.7, 'bagging_freq': 1,
+    'early_stopping_rounds': 100, 'verbose': 1}'''
+    #self.training_params = ['number_boosting_rounds', 'early_stopping_rounds']
+    self.params = {  'objective': 'binary', 'metric': 'auc','nthread': 4, #'boost_from_average':False,
+            'n_estimators':10000, 'learning_rate':1,
+            'max_depth': -1, 'num_leaves':32, 'max_bin': 25,
+            'feature_fraction': 0.80, 'bagging_fraction':0.7, 'bagging_freq': 1,
             'reg_alpha':3, 'reg_lambda':3,
             'min_split_gain':0.0000215, #'min_child_weight':40,
             #'class_weight': 'balanced',
@@ -49,7 +50,7 @@ class LiteGBM:
 
   def kfold_lightgbm(self):
     print("Starting LightGBM. Train shape: {}, test shape: {}".format(self.train_df.shape, self.test_df.shape))
-    folds = StratifiedKFold(n_splits= self.num_folds, shuffle=True, random_state=1001)
+    folds = StratifiedKFold(n_splits= self.num_folds, shuffle=True, random_state=1)
     # Create arrays and dataframes to store results
     oof_preds = np.zeros(self.train_df.shape[0])
     sub_preds = np.zeros(self.test_df.shape[0])
@@ -63,7 +64,7 @@ class LiteGBM:
       train_x, train_y = self.train_df[feats].iloc[train_idx], self.train_df['TARGET'].iloc[train_idx]
       valid_x, valid_y = self.train_df[feats].iloc[valid_idx], self.train_df['TARGET'].iloc[valid_idx]
       clf = LGBMClassifier(**self.params)
-      clf.fit(train_x, train_y, eval_set=[(train_x, train_y), (valid_x, valid_y)], eval_metric= 'auc', verbose= 100, early_stopping_rounds= 50 )
+      clf.fit(train_x, train_y, eval_set=[(train_x, train_y), (valid_x, valid_y)], eval_metric= 'auc', verbose= 100, early_stopping_rounds= 200 )
       oof_preds[valid_idx] = clf.predict_proba(valid_x, num_iteration=clf.best_iteration_)[:, 1]
       sub_preds += clf.predict_proba(self.test_df[feats], num_iteration=clf.best_iteration_)[:, 1] / folds.n_splits
       fold_importance_df = pd.DataFrame()
@@ -80,10 +81,9 @@ class LiteGBM:
     if not self.debug:
       self.test_df['TARGET'] = sub_preds
       submission = self.test_df[['SK_ID_CURR', 'TARGET']]
-      save_k_fold_results(feature_importance_df, full_auc, params, submission)
+      self.save_k_fold_results(feature_importance_df, full_auc, params, submission)
 
-  @staticmethod
-  def save_k_fold_results(feature_importance_df_, full_auc, params, submission):
+  def save_k_fold_results(self, feature_importance_df_, full_auc, params, submission):
       ts = datetime.datetime.now().strftime("%b%d,%I:%M")
       cols = feature_importance_df_[["feature", "importance"]].groupby("feature").mean().sort_values(by="importance", ascending=False).index
       best_features = feature_importance_df_.loc[feature_importance_df_.feature.isin(cols)]
