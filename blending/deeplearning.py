@@ -1,9 +1,4 @@
-
-# coding: utf-8
-
-# In[52]:
-
-
+### FINALIZED
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
@@ -64,7 +59,6 @@ for col in list(df):
         df.drop(col, axis=1, inplace=True)
 
 
-#scaler.fit(df[])
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
 scaler = MinMaxScaler()
 df[cols] = scaler.fit_transform(df[cols])
@@ -72,8 +66,6 @@ df[cols] = scaler.fit_transform(df[cols])
 
 train = df[df['TARGET'].notnull()]
 test = df[df['TARGET'].isnull()]
-#train = scaler.transform(train)
-#test = scaler.transform(test)
 
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
@@ -122,16 +114,24 @@ nn.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
 nn.compile(loss='binary_crossentropy', optimizer='adam')
 
 print( 'Fitting neural network...' )
-nn.fit(X, y, validation_split=0.2, epochs=10, verbose=2)
+nn.fit(X, y, validation_split=0.2, epochs=100, verbose=2)
 
 print( 'Predicting...' )
-y_pred = nn.predict(X_test).flatten().clip(0,1)
+y_pred_train = nn.predict(X).flatten().clip(0,1)
+y_pred_test = nn.predict(X_test).flatten().clip(0,1)
 
+tr = pd.DataFrame()
+tr['SK_ID_CURR'] = train['SK_ID_CURR']
+tr['NN_SCORE'] = y_pred_train
+#tr[['SK_ID_CURR', 'NN_SCORE']].to_csv('sub_nn.csv', index= False)
 
 print( 'Saving results...' )
-sub = pd.DataFrame()
-sub['SK_ID_CURR'] = test['SK_ID_CURR']
-sub['TARGET'] = y_pred
-sub[['SK_ID_CURR', 'TARGET']].to_csv('sub_nn.csv', index= False)
+te = pd.DataFrame()
+te['SK_ID_CURR'] = test['SK_ID_CURR']
+te['NN_SCORE'] = y_pred_test
+#te[['SK_ID_CURR', 'NN_SCORE']].to_csv('sub_nn.csv', index= False)
 
-print( sub.head() )
+tr_te = tr.append(te).reset_index()
+tr_te.to_csv('deep_learning_tr_te.csv', index= False)
+
+print( tr_te.head() )

@@ -66,8 +66,6 @@ def change_data(): # imported result of this to /home/gublu/Desktop/THINKSTATS/C
 def main():
     #df = change_data()
     #print(df.shape)
-    #df = WOEScores(df, debug=debug).append_woe_scores()
-    #df.to_csv('shiv_300.csv', index=False)
     #scaler = StandardScaler()
     #df[['all_num_features here']] = scaler.fit_transform(df[['all_num_features here']])
     #pe(df.shape)
