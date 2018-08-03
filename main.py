@@ -71,10 +71,10 @@ def main():
     #scaler = StandardScaler()
     #df[['all_num_features here']] = scaler.fit_transform(df[['all_num_features here']])
     #pe(df.shape)
-    #df = read_data('shiv', debug)
-
-    train_df = read_csv_data('shiv_train', debug)
-    test_df = read_csv_data('shiv_test', debug)
+    df = read_hdf_data('shiv', debug)
+    df.to_csv('/home/gublu/Desktop/THINKSTATS/Competition/data/shiv.csv', index=False)
+    #train_df = read_csv_data('shiv_train', debug)
+    #test_df = read_csv_data('shiv_test', debug)
 
     print(train_df.shape, test_df.shape)
     #dt(df)
