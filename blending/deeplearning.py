@@ -8,16 +8,20 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 import pandas as pd
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
 
-def read_csv_data(file_name, debug, server=False, num_rows=200):
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.layers import Dropout, BatchNormalization
+from keras.layers.advanced_activations import PReLU
+from keras.optimizers import Adam
+
+def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
         path = '/home/science/data/'
         df = pd.read_hdf(path + file_name + '.h5', 'data')
@@ -59,10 +63,22 @@ for col in list(df):
     if df[col].isnull().any():
         df.drop(col, axis=1, inplace=True)
 
+
+#scaler.fit(df[])
+cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+scaler = MinMaxScaler()
+df[cols] = scaler.fit_transform(df[cols])
+
+
 train = df[df['TARGET'].notnull()]
 test = df[df['TARGET'].isnull()]
+#train = scaler.transform(train)
+#test = scaler.transform(test)
+
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
+
+
 
 train_dataset = train.values
 X = train_dataset[:,2:]
@@ -79,48 +95,43 @@ print(X.shape, y.shape, X_test.shape)
 
 
 # In[34]:
+# https://www.kaggle.com/aharless/simple-ffnn-from-dromosys-features
+
+print( 'Setting up neural network...' )
+nn = Sequential()
+nn.add(Dense(units = 300 , kernel_initializer = 'normal', input_dim = X.shape[1]))
+nn.add(PReLU())
+nn.add(Dropout(.3))
+nn.add(Dense(units = 160 , kernel_initializer = 'normal'))
+nn.add(PReLU())
+nn.add(BatchNormalization())
+nn.add(Dropout(.3))
+nn.add(Dense(units = 64 , kernel_initializer = 'normal'))
+nn.add(PReLU())
+nn.add(BatchNormalization())
+nn.add(Dropout(.3))
+nn.add(Dense(units = 26, kernel_initializer = 'normal'))
+nn.add(PReLU())
+nn.add(BatchNormalization())
+nn.add(Dropout(.3))
+nn.add(Dense(units = 12, kernel_initializer = 'normal'))
+nn.add(PReLU())
+nn.add(BatchNormalization())
+nn.add(Dropout(.3))
+nn.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
+nn.compile(loss='binary_crossentropy', optimizer='adam')
+
+print( 'Fitting neural network...' )
+nn.fit(X, y, validation_split=0.2, epochs=10, verbose=2)
+
+print( 'Predicting...' )
+y_pred = nn.predict(X_test).flatten().clip(0,1)
 
 
-# baseline model
-def auc(y_true, y_pred):
-    auc = tf.metrics.auc(y_true, y_pred)[1]
-    K.get_session().run(tf.local_variables_initializer())
-    return auc
+print( 'Saving results...' )
+sub = pd.DataFrame()
+sub['SK_ID_CURR'] = test['SK_ID_CURR']
+sub['TARGET'] = y_pred
+sub[['SK_ID_CURR', 'TARGET']].to_csv('sub_nn.csv', index= False)
 
-def create_baseline():
-    # create model
-    model = Sequential()
-    model.add(Dense(30, input_dim=X.shape[1], kernel_initializer='normal', activation='relu'))
-    model.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
-    # Compile model
-    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    model.compile(loss="binary_crossentropy", optimizer='adam', metrics=['accuracy']) # , auc])
-    return model
-
-
-# In[35]:
-
-
-estimators = []
-estimators.append(('standardize', StandardScaler()))
-estimators.append(('mlp', KerasClassifier(build_fn=create_baseline, epochs=1, batch_size=100, verbose=1)))
-pipeline = Pipeline(estimators)
-kfold = StratifiedKFold(n_splits=2, shuffle=True, random_state=seed)
-results = cross_val_score(pipeline, X, y, cv=kfold)
-print("Smaller: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
-
-
-# In[ ]:
-
-
-#test_df = read_csv_data('shiv_test', debug=True)
-
-
-# In[43]:
-
-estimators[1][1].fit(X, y)
-
-y_pred = estimators[1][1].predict(X_test)#[:, 1]
-#y_pred_proba = model.predict(X_test, num_iteration=model.best_iteration)
-output = pd.DataFrame(data={"SK_ID_CURR":test["SK_ID_CURR"],"TARGET":y_pred})
-output.to_csv("submission.csv", index=False)
+print( sub.head() )
