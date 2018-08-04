@@ -48,21 +48,9 @@ np.random.seed(seed)
 df = read_csv_data('shiv', debug=False)
 df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
-
-df = label_encode_it(df)
-for col in list(df):
-    if col == 'TARGET':
-        continue
-    df[col].replace(np.inf, np.nan, inplace=True)
-    df[col].replace(-np.inf, np.nan, inplace=True)
-    if df[col].isnull().any():
-        df.drop(col, axis=1, inplace=True)
-
-
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-scaler = MinMaxScaler()
-df[cols] = scaler.fit_transform(df[cols])
 
+df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
 test = df[df['TARGET'].isnull()]
@@ -70,7 +58,27 @@ test = df[df['TARGET'].isnull()]
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
 
+cols_to_drop = []
+for col in list(df):
+    if col == 'TARGET':
+        continue
+    train[col].replace(np.inf, np.nan, inplace=True)
+    test[col].replace(np.inf, np.nan, inplace=True)
+    train[col].replace(-np.inf, np.nan, inplace=True)
+    test[col].replace(-np.inf, np.nan, inplace=True)
+    if train[col].isnull().any():
+        cols_to_drop.append(col)
+    if test[col].isnull().any():
+        cols_to_drop.append(col)
+    cols_to_drop = list(set(cols_to_drop))
 
+train.drop(cols_to_drop, axis=1, inplace=True)
+test.drop(cols_to_drop, axis=1, inplace=True)
+
+cols = [col for col in train.columns if col not in ['TARGET', 'SK_ID_CURR']]
+scaler = MinMaxScaler()
+train[cols] = scaler.fit_transform(train[cols])
+test[cols] = scaler.fit(test[cols])
 
 train_dataset = train.values
 X = train_dataset[:,2:]
@@ -83,7 +91,7 @@ X_test = test_dataset[:,2:]
 print(type(X_test))
 
 
-print(X.shape, y.shape, X_test.shape)
+print(X.shape, y.shape, X_test.shape, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
 
 # In[34]:
@@ -114,7 +122,7 @@ nn.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
 nn.compile(loss='binary_crossentropy', optimizer='adam')
 
 print( 'Fitting neural network...' )
-nn.fit(X, y, validation_split=0.2, epochs=100, verbose=2)
+nn.fit(X, y, validation_split=0.2, epochs=100, batch_size=5, verbose=2)
 
 print( 'Predicting...' )
 y_pred_train = nn.predict(X).flatten().clip(0,1)
