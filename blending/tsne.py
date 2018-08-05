@@ -11,7 +11,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
 
-def read_csv_data(file_name, debug, server=False, num_rows=200):
+def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
         path = '/home/science/data/'
         df = pd.read_hdf(path + file_name + '.h5', 'data')
@@ -89,6 +89,7 @@ for col in list(df):
 
 train.drop(cols_to_drop, axis=1, inplace=True)
 test.drop(cols_to_drop, axis=1, inplace=True)
+test = test.reset_index(drop=True)
 #print(cols_to_drop, 'cols_to_drop')
 print(train.shape, test.shape)
 train_dataset = train.values
@@ -118,12 +119,16 @@ It is highly recommended to use another dimensionality reduction
 n_components = 50
 pca = PCA(n_components=n_components)
 principalComponents = pca.fit_transform(X)
-col_names  = ["pc" + (col+1) for col in range(n_components)]
+col_names  = ["pc" + str(col+1) for col in range(n_components)]
 tr_pca  = pd.DataFrame(data = principalComponents, columns = col_names)
 te_pca_np = pca.transform(X_test)
 te_pca  = pd.DataFrame(data = te_pca_np, columns = col_names)
-print('tr shape', tr.shape)
-print(tr.head())
+print('tr_pca shape*****', tr_pca.shape)
+print(tr_pca.head())
+
+print('te_pca shape*****', te_pca.shape)
+print(te_pca.head())
+
 X_train = tr_pca.values
 X_test = te_pca.values
 
@@ -138,7 +143,7 @@ X_test_embedded = tsne.transform(X_test)
 
 train_principalDf  = pd.DataFrame(data = X_train_embedded, columns = ['tsne_1', 'tsne_2', 'tsne_3'])
 tr = pd.concat([train_principalDf, train[['SK_ID_CURR']]], axis = 1)
-print('te shape', tr.shape)
+print('tr shape', tr.shape)
 print(tr.head())
 
 

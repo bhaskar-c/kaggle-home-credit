@@ -7,7 +7,7 @@
 # imports
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, KernelPCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
@@ -118,18 +118,20 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 # In[5]:
 
 
-pca = PCA(n_components=6)
-principalComponents = pca.fit_transform(X)
-principalDf  = pd.DataFrame(data = principalComponents, columns = ['pc1', 'pc2', 'pc3', 'pc4', 'pc5', 'pc6'])
+kpca = KernelPCA(kernel="rbf", fit_inverse_transform=True, gamma=10)
+
+pca = PCA(n_components=6, kernel="poly")
+principalComponents = kpca.fit_transform(X)
+principalDf  = pd.DataFrame(data = principalComponents, columns = ['kpca1', 'kpca2', 'kpca3', 'kpca4', 'kpca5', 'kpca6'])
 tr = pd.concat([principalDf, train[['SK_ID_CURR']]], axis = 1)
 print('tr shape', tr.shape)
 print(tr.head())
 
 
-X_test_transformed = pca.transform(X_test)
+X_test_transformed = kpca.transform(X_test)
 print('X_test_transformed', X_test_transformed.shape)
 print('pca.explained_variance_ratio_', pca.explained_variance_ratio_)
-test_principalDf  = pd.DataFrame(data = X_test_transformed, columns = ['pc1', 'pc2', 'pc3', 'pc4', 'pc5', 'pc6'])
+test_principalDf  = pd.DataFrame(data = X_test_transformed, columns = ['kpca1', 'kpca2', 'kpca3', 'kpca4', 'kpca5', 'kpca6'])
 te = test_principalDf.join(test[['SK_ID_CURR']])
 #te = pd.concat([test_principalDf, test[['SK_ID_CURR']]], axis = 1)
 print('te shape', te.shape)
@@ -138,6 +140,6 @@ print(te.head())
 
 tr_te = tr.append(te).reset_index()
 print('tr_te shape', tr_te.shape)
-tr_te.to_csv('pca_tr_te.csv', index= False)
+tr_te.to_csv('kernel_pca_tr_te.csv', index= False)
 
 

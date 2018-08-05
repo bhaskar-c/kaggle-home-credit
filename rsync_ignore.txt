@@ -3,3 +3,5 @@ __pycache__/
 images/
 stacking data/
 generated_features/
+.git/
+shiv_300.csv
