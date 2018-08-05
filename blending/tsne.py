@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeClassifier
-
+from sklearn.manifold import TSNE
 
 def read_csv_data(file_name, debug, server=False, num_rows=200):
     if server:
@@ -120,15 +119,17 @@ n_components = 50
 pca = PCA(n_components=n_components)
 principalComponents = pca.fit_transform(X)
 col_names  = ["pc" + (col+1) for col in range(n_components)]
-principalDf  = pd.DataFrame(data = principalComponents, columns = col_names)
-tr_pca = pd.concat([principalDf, train[['SK_ID_CURR']]], axis = 1)
-te_pca = pca.transform(X_test)
+tr_pca  = pd.DataFrame(data = principalComponents, columns = col_names)
+te_pca_np = pca.transform(X_test)
+te_pca  = pd.DataFrame(data = te_pca_np, columns = col_names)
 print('tr shape', tr.shape)
 print(tr.head())
-
-
 X_train = tr_pca.values
-X_test = tr_pca.values
+X_test = te_pca.values
+
+'''
+tsne time
+'''
 
 tsne = TSNE(n_components=3, perplexity=40, verbose=2)
 X_train_embedded = tsne.fit_transform(X_train)
