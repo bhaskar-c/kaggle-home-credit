@@ -7,7 +7,7 @@
 # imports
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA, KernelPCA
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
@@ -46,6 +46,17 @@ def min_max_scale_it(df):
             pass
     return df
 
+
+def norm_scale_it(df):
+    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+    for col in cols:
+        try:
+            df[col]  = df[col].fillna(df[col].mean())
+            df[col] = (df[col] - df[col].mean()) / (df[col].max() - df[col].min())
+        except:
+            pass
+    return df
+
 # fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
@@ -65,7 +76,7 @@ df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-df  = min_max_scale_it(df)
+df  = norm_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -116,27 +127,22 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
 # In[5]:
+df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-pca = PCA(n_components=6, kernel="poly", gamma=10)
-principalComponents = kpca.fit_transform(X)
-principalDf  = pd.DataFrame(data = principalComponents, columns = ['kpca1', 'kpca2', 'kpca3', 'kpca4', 'kpca5', 'kpca6'])
-tr = pd.concat([principalDf, train[['SK_ID_CURR']]], axis = 1)
-print('tr shape', tr.shape)
-print(tr.head())
+n_neighbors_list = [2,4,8,16,32,64,128,256,512,1024]
 
+for n in n_neighbors_list:
+    print('Calculating for {} neighbors****************', n)
+    knn = KNeighborsClassifier(n_neighbors=n)
+    knn_train = knn.fit(X, y)
+    knn_X_prediction  = knn.predict_proba(X)
+    knn_X_test_prediction  = knn.predict_proba(X_test)
+    tr_te_concatenated = numpy.concatenate([knn_X_prediction,knn_X_test_prediction])
+    df['knn_'+ str(n) + '_neighbors' ] = preds
 
-X_test_transformed = kpca.transform(X_test)
-print('X_test_transformed', X_test_transformed.shape)
-print('pca.explained_variance_ratio_', pca.explained_variance_ratio_)
-test_principalDf  = pd.DataFrame(data = X_test_transformed, columns = ['kpca1', 'kpca2', 'kpca3', 'kpca4', 'kpca5', 'kpca6'])
-te = test_principalDf.join(test[['SK_ID_CURR']])
-#te = pd.concat([test_principalDf, test[['SK_ID_CURR']]], axis = 1)
-print('te shape', te.shape)
-print(te.head())
+print('final tr_te shape', df.shape)
+print(df.head())
 
-
-tr_te = tr.append(te).reset_index()
-print('tr_te shape', tr_te.shape)
-tr_te.to_csv('kernel_pca_tr_te.csv', index= False)
+df.to_csv('knn_tr_te.csv', index= False)
 
 
