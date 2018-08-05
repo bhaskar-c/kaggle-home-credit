@@ -30,6 +30,7 @@ def read_csv_data(file_name, debug, server=True, num_rows=200):
         if str(df[col].dtype) == 'category':
             df[col] = df[col].astype('object')
     return df
+
 def label_encode_it(df):
     encode_these_columns = []
     for col in list(df):
@@ -41,6 +42,17 @@ def label_encode_it(df):
     print(encode_these_columns, '**********')
     return df
 
+def min_max_scale_it(df):
+    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+    for col in cols:
+        try:
+            df[col]  = df[col].fillna(df[col].mean())
+            df[col]=(df[col]-df[col].min())/(df[col].max()-df[col].min())
+        except:
+            pass
+    return df
+
+
 seed = 7
 np.random.seed(seed)
 
@@ -48,8 +60,9 @@ np.random.seed(seed)
 df = read_csv_data('shiv', debug=False)
 df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
-cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
 
+cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -74,12 +87,8 @@ for col in list(df):
 
 train.drop(cols_to_drop, axis=1, inplace=True)
 test.drop(cols_to_drop, axis=1, inplace=True)
-
-cols = [col for col in train.columns if col not in ['TARGET', 'SK_ID_CURR']]
-scaler = MinMaxScaler()
-train[cols] = scaler.fit_transform(train[cols])
-test[cols] = scaler.fit(test[cols])
-
+print(cols_to_drop, 'cols_to_drop')
+print(train.shape, test.shape)
 train_dataset = train.values
 X = train_dataset[:,2:]
 y = train_dataset[:,1]
@@ -91,7 +100,7 @@ X_test = test_dataset[:,2:]
 print(type(X_test))
 
 
-print(X.shape, y.shape, X_test.shape, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+print(X.shape, y.shape, X_test.shape)
 
 
 # In[34]:
@@ -122,7 +131,7 @@ nn.add(Dense(1, kernel_initializer='normal', activation='sigmoid'))
 nn.compile(loss='binary_crossentropy', optimizer='adam')
 
 print( 'Fitting neural network...' )
-nn.fit(X, y, validation_split=0.2, epochs=100, batch_size=5, verbose=2)
+nn.fit(X, y, validation_split=0.2, epochs=100, batch_size=10, verbose=2)
 
 print( 'Predicting...' )
 y_pred_train = nn.predict(X).flatten().clip(0,1)
@@ -137,7 +146,7 @@ print( 'Saving results...' )
 te = pd.DataFrame()
 te['SK_ID_CURR'] = test['SK_ID_CURR']
 te['NN_SCORE'] = y_pred_test
-#te[['SK_ID_CURR', 'NN_SCORE']].to_csv('sub_nn.csv', index= False)
+te[['SK_ID_CURR', 'NN_SCORE']].to_csv('sub_nn.csv', index= False)
 
 tr_te = tr.append(te).reset_index()
 tr_te.to_csv('deep_learning_tr_te.csv', index= False)
