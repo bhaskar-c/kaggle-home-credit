@@ -32,7 +32,8 @@ warnings.simplefilter(action='ignore')
 # https://www.kaggle.com/shep312/deep-learning-in-tf-with-upsampling-lb-758
 # https://github.com/turi-code/python-libffm/blob/master/examples/basic.py
 # https://www.kaggle.com/c/otto-group-product-classification-challenge/discussion/14335
-# http://blog.kaggle.com/2015/06/09/otto-product-classification-winners-interview-2nd-place-alexander-guschin/
+# http://blog.kaggle.com/2015/06/09/otto-product-classification-winners-interview-2nd-place-alexander-guschin/4
+# http://dataaspirant.com/2016/09/24/classification-clustering-alogrithms/
 #scp root@159.65.83.37:/home/science/data/shiv.h5 /home/gublu/Desktop/THINKSTATS/Competition/hdf
 
 

@@ -7,9 +7,7 @@
 # imports
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import KNN
+from sklearn.svm import SVC
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -128,22 +126,20 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 # In[5]:
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-n_neighbors_list = [2,4,8,16,32,64,128,256,512,1024]
+kernels = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed' ]
 
-for n in n_neighbors_list:
-    print('Calculating for {} neighbors****************', n)
-    knn = KNeighborsClassifier(n_neighbors=n)
-    knn_train = knn.fit(X, y)
-    knn_X_prediction  = knn.predict_proba(X)
-    knn_X_test_prediction  = knn.predict_proba(X_test)
-    tr_te_concatenated = numpy.concatenate([knn_X_prediction,knn_X_test_prediction])
-    df['knn_'+ str(n) + '_neighbors' ] = preds
+for kernel in kernels:
+    print('Calculating for {} kernel****************', kernel)
+    svc = SVC(kernel=kernel)
+    svc_train = svc.fit(X, y)
+    svc_X_prediction  = svc.predict_proba(X)
+    svc_X_test_prediction  = svc.predict_proba(X_test)
+    tr_te_concatenated = numpy.concatenate([svc_X_prediction,svc_X_test_prediction])
+    df['svc_'+ kernel + '_kernel' ] = preds
 
 print('final tr_te shape', df.shape)
 print(df.head())
 
-#http://davpinto.com/fastknn/articles/knn-extraction.html
-
-df.to_csv('knn_tr_te.csv', index= False)
+df.to_csv('svc_tr_te.csv', index= False)
 
 
