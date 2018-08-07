@@ -1,9 +1,13 @@
-#Model Logistic Regression(scikit). Dataset: Log(X+1)
+
+# coding: utf-8
+
+# In[1]:
 
 
+# imports
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -50,16 +54,6 @@ def norm_scale_it(df):
             pass
     return df
 
-
-def log_x_plus_one(df):
-    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-    for col in cols:
-        try:
-            df[col]  = np.log(df[col] + 1)
-        except:
-            df = df.drop(col, 1)
-    return df
-
 # fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
@@ -81,7 +75,6 @@ df = df.replace(np.inf, np.nan)
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
 df  = norm_scale_it(df)
 df[cols] = label_encode_it(df[cols])
-df = log_x_plus_one(df)
 
 train = df[df['TARGET'].notnull()]
 test = df[df['TARGET'].isnull()]
@@ -91,7 +84,7 @@ test  = test.fillna(df.mean())
 
 cols_to_drop = []
 for col in list(df):
-    if col in ['TARGET', 'SK_ID_CURR']:
+    if col == 'TARGET':
         continue
     train[col].replace(np.inf, np.nan, inplace=True)
     test[col].replace(np.inf, np.nan, inplace=True)
@@ -130,22 +123,26 @@ print(type(X_test))
 print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
-LogisticRegression
-
 # In[5]:
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-print('Linear Regression ****************')
-lr = LogisticRegression()
-lr_train = lr.fit(X, y)
-lr_X_prediction  = lr.predict_proba(X)
-lr_X_test_prediction  = lr.predict_proba(X_test)
-tr_te_concatenated = numpy.concatenate([lr_X_prediction, lr_X_test_prediction])
-df['lr'] = preds
+print('Random Forest Begins****************')
+rfc = RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
+            max_depth=8, max_features=0.2, max_leaf_nodes=None,
+            min_impurity_decrease=0.0, min_impurity_split=None,
+            min_samples_leaf=1, min_samples_split=2,
+            min_weight_fraction_leaf=0.0, n_estimators=1000, n_jobs=1,
+            oob_score=False, random_state=0, verbose=0, warm_start=False)
+
+rfc_train = rfc.fit(X, y)
+rfc_X_prediction  = rfc.predict_proba(X)
+rfc_X_test_prediction  = rfc.predict_proba(X_test)
+tr_te_concatenated = numpy.concatenate([rfc_X_prediction,rfc_X_test_prediction])
+df['random_forest'] = preds
 
 print('final tr_te shape', df.shape)
 print(df.head())
 
-df.to_csv('lr_tr_te.csv', index= False)
+df.to_csv('random_forest_tr_te.csv', index= False)
 
 

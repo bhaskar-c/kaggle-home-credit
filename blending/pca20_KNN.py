@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.manifold import TSNE
+from sklearn.neighbors import KNeighborsClassifier
+import gc
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -45,6 +46,17 @@ def min_max_scale_it(df):
             pass
     return df
 
+
+def norm_scale_it(df):
+    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+    for col in cols:
+        try:
+            df[col]  = df[col].fillna(df[col].mean())
+            df[col] = (df[col] - df[col].mean()) / (df[col].max() - df[col].min())
+        except:
+            pass
+    return df
+
 # fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
@@ -64,6 +76,7 @@ df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+df  = norm_scale_it(df)
 df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
@@ -72,6 +85,8 @@ test = df[df['TARGET'].isnull()]
 
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
+
+
 
 cols_to_drop = []
 for col in list(df):
@@ -90,6 +105,8 @@ for col in list(df):
 train.drop(cols_to_drop, axis=1, inplace=True)
 test.drop(cols_to_drop, axis=1, inplace=True)
 test = test.reset_index(drop=True)
+print(test.head())
+print(test.shape)
 #print(cols_to_drop, 'cols_to_drop')
 print(train.shape, test.shape)
 train_dataset = train.values
@@ -107,21 +124,24 @@ X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
 test_dataset = test.values
-X_test = test_dataset[:,2:]
-print(type(X_test))
-print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
+X_te = test_dataset[:,2:]
+print(type(X_te))
+print('X.shape, y.shape, X_te.shape', X.shape, y.shape, X_te.shape)
+
+
+
 
 '''
 It is highly recommended to use another dimensionality reduction
  |  method (e.g. PCA for dense data or TruncatedSVD for sparse data)
  |  to reduce the number of dimensions to a reasonable amount (e.g. 50)
 '''
-n_components = 50
+n_components = 20
 pca = PCA(n_components=n_components)
 principalComponents = pca.fit_transform(X)
 col_names  = ["pc" + str(col+1) for col in range(n_components)]
 tr_pca  = pd.DataFrame(data = principalComponents, columns = col_names)
-te_pca_np = pca.transform(X_test)
+te_pca_np = pca.transform(X_te)
 te_pca  = pd.DataFrame(data = te_pca_np, columns = col_names)
 print('tr_pca shape*****', tr_pca.shape)
 print(tr_pca.head())
@@ -131,32 +151,37 @@ print(te_pca.head())
 
 X_train = tr_pca.values
 X_test = te_pca.values
-
-'''
-tsne time
-'''
-
-tsne = TSNE(n_components=3, perplexity=40, verbose=2)
-X_train_embedded = tsne.fit_transform(X_train)
+output_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
 
-X_test_embedded = tsne.transform(X_test) this does not exists
-we will need to change it to https://github.com/kylemcdonald/Parametric-t-SNE/blob/master/Parametric%20t-SNE%20(Keras).ipynb
+del (df, train, test, X, X_te)
+gc.collect()
 
 
-train_principalDf  = pd.DataFrame(data = X_train_embedded, columns = ['tsne_1', 'tsne_2', 'tsne_3'])
-tr = pd.concat([train_principalDf, train[['SK_ID_CURR']]], axis = 1)
-print('tr shape', tr.shape)
-print(tr.head())
+
+# In[5]:
 
 
-test_principalDf  = pd.DataFrame(data = X_test_embedded, columns = ['tsne_1', 'tsne_2', 'tsne_3'])
-te = pd.concat([test_principalDf, test[['SK_ID_CURR']]], axis = 1)
-print('te shape', te.shape)
-print(te.head())
+n_neighbors_list = [2,4,8,16,32,64,128,256,512,1024]
 
-tr_te = tr.append(te).reset_index()
-print('tr_te shape', tr_te.shape)
-tr_te.to_csv('tsne_3_tr_te.csv', index= False)
+for n in n_neighbors_list:
+    print('Calculating for {} neighbors****************', n)
+    knn = KNeighborsClassifier(n_neighbors=n)
+    knn_train = knn.fit(X_train, y)
+    knn_X_prediction  = knn.predict_proba(X_train)[:, 1]
+    print('knn_X_prediction', knn_X_prediction.shape)
+    knn_X_test_prediction  = knn.predict_proba(X_test)[:, 1]
+    print('knn_X_test_prediction', knn_X_test_prediction.shape)
+    tr_te_concatenated = np.concatenate([knn_X_prediction,knn_X_test_prediction])
+    print('tr_te_concatenated', tr_te_concatenated.shape)
+    output_df['knn_'+ str(n) + '_neighbors' ] = tr_te_concatenated
+
+
+print('final tr_te shape', output_df.shape)
+print(output_df.head())
+
+#http://davpinto.com/fastknn/articles/knn-extraction.html
+
+output_df.to_csv('pca20_knn_tr_te.csv', index= False)
 
 

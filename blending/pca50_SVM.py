@@ -1,15 +1,9 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
-# imports
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import KNN
+from sklearn.neighbors import KNeighborsClassifier
+import gc
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -76,6 +70,7 @@ df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
 df  = norm_scale_it(df)
+df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -83,6 +78,8 @@ test = df[df['TARGET'].isnull()]
 
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
+
+
 
 cols_to_drop = []
 for col in list(df):
@@ -120,30 +117,54 @@ X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
 test_dataset = test.values
-X_test = test_dataset[:,2:]
-print(type(X_test))
-print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
+X_te = test_dataset[:,2:]
+print(type(X_te))
+print('X.shape, y.shape, X_te.shape', X.shape, y.shape, X_te.shape)
 
 
-# In[5]:
-df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-n_neighbors_list = [2,4,8,16,32,64,128,256,512,1024]
 
-for n in n_neighbors_list:
-    print('Calculating for {} neighbors****************', n)
-    knn = KNeighborsClassifier(n_neighbors=n)
-    knn_train = knn.fit(X, y)
-    knn_X_prediction  = knn.predict_proba(X)
-    knn_X_test_prediction  = knn.predict_proba(X_test)
-    tr_te_concatenated = numpy.concatenate([knn_X_prediction,knn_X_test_prediction])
-    df['knn_'+ str(n) + '_neighbors' ] = preds
+'''
+It is highly recommended to use another dimensionality reduction
+ |  method (e.g. PCA for dense data or TruncatedSVD for sparse data)
+ |  to reduce the number of dimensions to a reasonable amount (e.g. 50)
+'''
+n_components = 20
+pca = PCA(n_components=n_components)
+principalComponents = pca.fit_transform(X)
+col_names  = ["pc" + str(col+1) for col in range(n_components)]
+tr_pca  = pd.DataFrame(data = principalComponents, columns = col_names)
+te_pca_np = pca.transform(X_te)
+te_pca  = pd.DataFrame(data = te_pca_np, columns = col_names)
+print('tr_pca shape*****', tr_pca.shape)
+print(tr_pca.head())
 
-print('final tr_te shape', df.shape)
+print('te_pca shape*****', te_pca.shape)
+print(te_pca.head())
+
+X_train = tr_pca.values
+X_test = te_pca.values
+output_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
+
+
+del (df, train, test, X, X_te)
+gc.collect()
+
+
+kernels = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed' ]
+
+for kernel in kernels:
+    print('Calculating for {} kernel****************', kernel)
+    svc = SVC(kernel=kernel)
+    svc_train = svc.fit(X, y)
+    svc_X_prediction  = svc.predict_proba(X)
+    svc_X_test_prediction  = svc.predict_proba(X_test)
+    tr_te_concatenated = numpy.concatenate([svc_X_prediction,svc_X_test_prediction])
+    output_df['svc_'+ kernel + '_kernel' ] = tr_te_concatenated
+
+print('final tr_te shape', output_df.shape)
 print(df.head())
 
-#http://davpinto.com/fastknn/articles/knn-extraction.html
-
-df.to_csv('knn_tr_te.csv', index= False)
+output_df.to_csv('pca50_svm_tr_te.csv', index= False)
 
 

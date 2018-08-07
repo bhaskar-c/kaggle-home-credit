@@ -7,7 +7,7 @@
 # imports
 import numpy as np
 import pandas as pd
-from sklearn.svm import SVC
+from sklearn.ensemble import ExtraTreesClassifier
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -126,20 +126,21 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 # In[5]:
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-kernels = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed' ]
+print('ExtraTreesClassifier Begins****************')
+etc = ExtraTreesClassifier(n_estimators=1000, criterion='gini', max_depth=None, min_samples_split=2,
+        min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features=0.3, max_leaf_nodes=None,
+        min_impurity_decrease=0.0, min_impurity_split=None, bootstrap=False, oob_score=False,
+        n_jobs=1, random_state=None, verbose=0, warm_start=False, class_weight=None)
 
-for kernel in kernels:
-    print('Calculating for {} kernel****************', kernel)
-    svc = SVC(kernel=kernel)
-    svc_train = svc.fit(X, y)
-    svc_X_prediction  = svc.predict_proba(X)
-    svc_X_test_prediction  = svc.predict_proba(X_test)
-    tr_te_concatenated = numpy.concatenate([svc_X_prediction,svc_X_test_prediction])
-    df['svc_'+ kernel + '_kernel' ] = preds
+etc_train = etc.fit(X, y)
+etc_X_prediction  = etc.predict_proba(X)[:, 1]
+etc_X_test_prediction  = etc.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([etc_X_prediction,etc_X_test_prediction])
+df['extra_tree_classifier'] = tr_te_concatenated
 
 print('final tr_te shape', df.shape)
 print(df.head())
 
-df.to_csv('svc_tr_te.csv', index= False)
+df.to_csv('extra_tree_classifier_tr_te.csv', index= False)
 
 
