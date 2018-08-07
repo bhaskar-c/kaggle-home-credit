@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 import gc
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
@@ -156,11 +156,11 @@ kernels = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed' ]
 for kernel in kernels:
     print('Calculating for {} kernel****************', kernel)
     svc = SVC(kernel=kernel)
-    svc_train = svc.fit(X, y)
-    svc_X_prediction  = svc.predict_proba(X)
+    svc_train = svc.fit(X_train, y)
+    svc_X_train_prediction  = svc.predict_proba(X_train)
     svc_X_test_prediction  = svc.predict_proba(X_test)
-    tr_te_concatenated = numpy.concatenate([svc_X_prediction,svc_X_test_prediction])
-    output_df['svc_'+ kernel + '_kernel' ] = tr_te_concatenated
+    tr_te_concatenated = numpy.concatenate([svc_X_train_prediction,svc_X_test_prediction])
+    output_df['pca50_svc_'+ kernel + '_kernel' ] = tr_te_concatenated
 
 print('final tr_te shape', output_df.shape)
 print(df.head())
