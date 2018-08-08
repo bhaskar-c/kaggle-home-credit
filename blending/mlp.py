@@ -1,13 +1,13 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
-# imports
+### FINALIZED
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.neural_network import MLPClassifier
+
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -23,6 +23,7 @@ def read_csv_data(file_name, debug, server=True, num_rows=200):
         if str(df[col].dtype) == 'category':
             df[col] = df[col].astype('object')
     return df
+
 def label_encode_it(df):
     encode_these_columns = []
     for col in list(df):
@@ -33,6 +34,7 @@ def label_encode_it(df):
             df[col] = df[col].astype('category').cat.codes
     print(encode_these_columns, '**********')
     return df
+
 def min_max_scale_it(df):
     cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
     for col in cols:
@@ -44,36 +46,16 @@ def min_max_scale_it(df):
     return df
 
 
-def norm_scale_it(df):
-    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-    for col in cols:
-        try:
-            df[col]  = df[col].fillna(df[col].mean())
-            df[col] = (df[col] - df[col].mean()) / (df[col].max() - df[col].min())
-        except:
-            pass
-    return df
-
-# fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
 
 
-# In[2]:
-
-
 df = read_csv_data('shiv', debug=False)
-
-
-# In[ ]:
-
-
-# impute and scale
 df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-df  = norm_scale_it(df)
+df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -98,49 +80,55 @@ for col in list(df):
 
 train.drop(cols_to_drop, axis=1, inplace=True)
 test.drop(cols_to_drop, axis=1, inplace=True)
-test = test.reset_index(drop=True)
-print(test.head())
-print(test.shape)
-#print(cols_to_drop, 'cols_to_drop')
+print(cols_to_drop, 'cols_to_drop')
 print(train.shape, test.shape)
 train_dataset = train.values
 X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
-#print(X)
+print(X)
 
-
-# In[4]:
-
-
-train_dataset = train.values
-X = train_dataset[:,2:]
-y = train_dataset[:,1]
-y=y.astype('int')
 test_dataset = test.values
 X_test = test_dataset[:,2:]
 print(type(X_test))
-print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
-# In[5]:
-df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
-
-print('ExtraTreesClassifier Begins****************')
-etc = ExtraTreesClassifier(n_estimators=1000, criterion='entropy', max_depth=None, min_samples_split=2,
-        min_samples_leaf=1, min_weight_fraction_leaf=0.0, max_features=0.3, max_leaf_nodes=None,
-        min_impurity_decrease=0.0, min_impurity_split=None, bootstrap=False, oob_score=False,
-        n_jobs=1, random_state=None, verbose=0, warm_start=False, class_weight=None)
-
-etc_train = etc.fit(X, y)
-etc_X_prediction  = etc.predict_proba(X)[:, 1]
-etc_X_test_prediction  = etc.predict_proba(X_test)[:, 1]
-tr_te_concatenated = np.concatenate([etc_X_prediction,etc_X_test_prediction])
-df['extra_tree_classifier'] = tr_te_concatenated
-
-print('final tr_te shape', df.shape)
-print(df.head())
-
-df.to_csv('extra_tree_classifier_tr_te.csv', index= False)
+print(X.shape, y.shape, X_test.shape)
 
 
+# In[34]:
+# https://www.kaggle.com/aharless/simple-ffnn-from-dromosys-features
+
+print( 'Setting up a multilayer perceptron...' )
+
+mlp = MLPClassifier(activation='relu', alpha=80, batch_size='auto',
+       beta_1=0.9, beta_2=0.999, early_stopping=False,
+       epsilon=1e-08, hidden_layer_sizes=(500, 150, 30, 2), learning_rate='constant',
+       learning_rate_init=0.001, max_iter=500, momentum=0.9,
+       nesterovs_momentum=True, power_t=0.5, random_state=1, shuffle=True,
+       solver='lbfgs', tol=0.0001, validation_fraction=0.2, verbose=True,
+       warm_start=False)
+
+
+print( 'Fitting neural network...' )
+mlp.fit(X, y, validation_split=0.2, epochs=100, batch_size=10, verbose=2)
+
+print( 'Predicting...' )
+y_pred_train = mlp.predict(X).flatten().clip(0,1)
+y_pred_test = mlp.predict(X_test).flatten().clip(0,1)
+
+tr = pd.DataFrame()
+tr['SK_ID_CURR'] = train['SK_ID_CURR']
+tr['MLP_SCORE'] = y_pred_train
+#tr[['SK_ID_CURR', 'NN_SCORE']].to_csv('sub_nn.csv', index= False)
+
+print( 'Saving results...' )
+te = pd.DataFrame()
+te['SK_ID_CURR'] = test['SK_ID_CURR']
+te['MLP_SCORE'] = y_pred_test
+te[['SK_ID_CURR', 'TARGET']].to_csv('sub_mlp.csv', index= False)
+
+tr_te = tr.append(te).reset_index()
+tr_te.to_csv('mlp_tr_te.csv', index= False)
+
+print( tr_te.head() )

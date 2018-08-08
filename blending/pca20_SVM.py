@@ -151,20 +151,20 @@ del (df, train, test, X, X_te)
 gc.collect()
 
 
-kernels = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed' ]
+kernels = ['linear', 'poly']
 
 for kernel in kernels:
     print('Calculating for {} kernel****************', kernel)
-    svc = SVC(kernel=kernel)
+    svc = SVC(kernel=kernel, probability=True)
     svc_train = svc.fit(X_train, y)
-    svc_X_train_prediction  = svc.predict_proba(X_train)
-    svc_X_test_prediction  = svc.predict_proba(X_test)
-    tr_te_concatenated = numpy.concatenate([svc_X_train_prediction,svc_X_test_prediction])
-    output_df['pca50_svc_'+ kernel + '_kernel' ] = tr_te_concatenated
+    svc_X_train_prediction  = svc.predict_proba(X_train)[:, 1]
+    svc_X_test_prediction  = svc.predict_proba(X_test)[:, 1]
+    tr_te_concatenated = np.concatenate([svc_X_train_prediction,svc_X_test_prediction])
+    output_df['pca20_svm_'+ kernel + '_kernel' ] = tr_te_concatenated
 
 print('final tr_te shape', output_df.shape)
 print(df.head())
 
-output_df.to_csv('pca50_svm_tr_te.csv', index= False)
+output_df.to_csv('pca20_svm_tr_te.csv', index= False)
 
 

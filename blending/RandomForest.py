@@ -127,18 +127,18 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
 print('Random Forest Begins****************')
-rfc = RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
-            max_depth=8, max_features=0.2, max_leaf_nodes=None,
+rfc = RandomForestClassifier(bootstrap=True, class_weight=None, criterion='entropy',
+            max_depth=8, max_features=0.5, max_leaf_nodes=None,
             min_impurity_decrease=0.0, min_impurity_split=None,
             min_samples_leaf=1, min_samples_split=2,
             min_weight_fraction_leaf=0.0, n_estimators=1000, n_jobs=1,
             oob_score=False, random_state=0, verbose=0, warm_start=False)
 
 rfc_train = rfc.fit(X, y)
-rfc_X_prediction  = rfc.predict_proba(X)
-rfc_X_test_prediction  = rfc.predict_proba(X_test)
-tr_te_concatenated = numpy.concatenate([rfc_X_prediction,rfc_X_test_prediction])
-df['random_forest'] = preds
+rfc_X_prediction  = rfc.predict_proba(X)[:, 1]
+rfc_X_test_prediction  = rfc.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([rfc_X_prediction,rfc_X_test_prediction])
+df['random_forest'] = tr_te_concatenated
 
 print('final tr_te shape', df.shape)
 print(df.head())
