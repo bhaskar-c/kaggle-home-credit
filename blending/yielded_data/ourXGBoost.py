@@ -122,7 +122,7 @@ class OurXGBoost:
 
     self.test_df['TARGET'] = submission_test_predictions
     submission = self.test_df[['SK_ID_CURR', 'TARGET']]
-    submission.to_csv('xgboost_submission.csv', index= False)
+    #submission.to_csv('xgboost_submission.csv', index= False)
 
     tr_te_concatenated = np.concatenate([train_predictions, submission_test_predictions])
     self.output_df['xgboost'] = tr_te_concatenated

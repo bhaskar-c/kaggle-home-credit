@@ -1,9 +1,9 @@
+#Model Logistic Regression(scikit). Dataset: Log(X+1)
+
+
 import numpy as np
 import pandas as pd
-import gc
-from sklearn.decomposition import PCA, KernelPCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import SGDClassifier
 
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
@@ -40,6 +40,27 @@ def min_max_scale_it(df):
             pass
     return df
 
+
+def norm_scale_it(df):
+    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+    for col in cols:
+        try:
+            df[col]  = df[col].fillna(df[col].mean())
+            df[col] = (df[col] - df[col].mean()) / (df[col].max() - df[col].min())
+        except:
+            pass
+    return df
+
+
+def log_x_plus_one(df):
+    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+    for col in cols:
+        try:
+            df[col]  = np.log(df[col] + 1)
+        except:
+            df = df.drop(col, 1)
+    return df
+
 # fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
@@ -59,8 +80,9 @@ df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-df  = min_max_scale_it(df)
+df  = norm_scale_it(df)
 df[cols] = label_encode_it(df[cols])
+df = log_x_plus_one(df)
 
 train = df[df['TARGET'].notnull()]
 test = df[df['TARGET'].isnull()]
@@ -70,7 +92,7 @@ test  = test.fillna(df.mean())
 
 cols_to_drop = []
 for col in list(df):
-    if col == 'TARGET':
+    if col in ['TARGET', 'SK_ID_CURR']:
         continue
     train[col].replace(np.inf, np.nan, inplace=True)
     test[col].replace(np.inf, np.nan, inplace=True)
@@ -97,9 +119,7 @@ y=y.astype('int')
 
 
 # In[4]:
-out_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
-del df
-gc.collect()
+
 
 train_dataset = train.values
 X = train_dataset[:,2:]
@@ -111,41 +131,24 @@ print(type(X_test))
 print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
+
 # In[5]:
+df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
+loss_functions = [ 'log', 'modified_huber']
 
+for loss_function in loss_functions:
+    print('sgd classifier with loss function ****************', loss_function)
+    sgd = SGDClassifier(loss=loss_function, alpha=0.01)
+    sgd_train = sgd.fit(X, y)
+    sgd_X_prediction  = sgd.predict_proba(X)[:, 1]
+    sgd_X_test_prediction  = sgd.predict_proba(X_test)[:, 1]
+    tr_te_concatenated = np.concatenate([sgd_X_prediction, sgd_X_test_prediction])
+    df['sgd_' + loss_function + '_loss'] = tr_te_concatenated
 
-n_components = 2
-kernels = [ 'linear' ,'poly' ,'rbf' ,'sigmoid' ,'cosine' , 'precomputed']
-for kernel in kernels:
-    col_names  = ["kernel_pca_" + kernel + str(col+1) for col in range(n_components)]
-    kpca = KernelPCA(n_components=n_components, kernel=kernel, gamma=10, degree=3)
-    principalComponents = kpca.fit_transform(X)
-    principalDf  = pd.DataFrame(data = principalComponents, columns = col_names)
-    tr = pd.concat([principalDf, train[['SK_ID_CURR']]], axis = 1)
-    del principalDf
-    gc.collect()
-    print('tr shape', tr.shape)
-    print(tr.head())
-    X_test_transformed = kpca.transform(X_test)
-    print('X_test_transformed', X_test_transformed.shape)
-    test_principalDf  = pd.DataFrame(data = X_test_transformed, columns = col_names)
-    te = test_principalDf.join(test[['SK_ID_CURR']])
-    del test_principalDf
-    gc.collect()
-    print('te shape', te.shape)
-    print(te.head())
-    tr_te = tr.append(te).reset_index()
-    del (tr, te)
-    gc.collect()
-    print('tr_te shape', tr_te.shape)
-    out_df = out_df.merge(tr_te, on=['SK_ID_CURR'], how='left')
-    del tr_te
-    gc.collect()
+print('final tr_te shape', df.shape)
+print(df.head())
 
-out_df.to_csv('kernel_pca_tr_te.csv', index= False)
-
-print(out_df.shape)
-print(out_df.head())
+df.to_csv('sgd_tr_te.csv', index= False)
 
 
