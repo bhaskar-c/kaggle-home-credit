@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
-import gc
+from sklearn.mixture import DPGMM
+
+
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -19,6 +18,7 @@ def read_csv_data(file_name, debug, server=True, num_rows=200):
         if str(df[col].dtype) == 'category':
             df[col] = df[col].astype('object')
     return df
+
 def label_encode_it(df):
     encode_these_columns = []
     for col in list(df):
@@ -29,6 +29,7 @@ def label_encode_it(df):
             df[col] = df[col].astype('category').cat.codes
     print(encode_these_columns, '**********')
     return df
+
 def min_max_scale_it(df):
     cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
     for col in cols:
@@ -70,7 +71,6 @@ df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
 df  = norm_scale_it(df)
-df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -78,8 +78,6 @@ test = df[df['TARGET'].isnull()]
 
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
-
-
 
 cols_to_drop = []
 for col in list(df):
@@ -117,55 +115,30 @@ X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
 test_dataset = test.values
-X_te = test_dataset[:,2:]
-print(type(X_te))
-print('X.shape, y.shape, X_te.shape', X.shape, y.shape, X_te.shape)
+X_test = test_dataset[:,2:]
+print(type(X_test))
+print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
+# In[5]:
+df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
+
+print('dirichlet process gaussian mixture begins****************')
+dpgmm = DPGMM(n_components=3)
+print('fitting****************')
+dpgmm_train = dpgmm.fit(X, y)
+print('predicting on train****************')
+dpgmm_X_prediction  = dpgmm.predict_proba(X)[:, 1]
+print('predicting on test****************')
+dpgmm_X_test_prediction  = dpgmm.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([dpgmm_X_prediction,dpgmm_X_test_prediction])
+df['dirichlet_process_gaussian_mixture'] = tr_te_concatenated
 
 
-'''
-It is highly recommended to use another dimensionality reduction
- |  method (e.g. PCA for dense data or TruncatedSVD for sparse data)
- |  to reduce the number of dimensions to a reasonable amount (e.g. 50)
-'''
-n_components = 20
-pca = PCA(n_components=n_components)
-principalComponents = pca.fit_transform(X)
-col_names  = ["pc" + str(col+1) for col in range(n_components)]
-tr_pca  = pd.DataFrame(data = principalComponents, columns = col_names)
-te_pca_np = pca.transform(X_te)
-te_pca  = pd.DataFrame(data = te_pca_np, columns = col_names)
-print('tr_pca shape*****', tr_pca.shape)
-print(tr_pca.head())
+print('final tr_te shape', df.shape)
+print(df.head())
 
-print('te_pca shape*****', te_pca.shape)
-print(te_pca.head())
+df.to_csv('dirichlet_process_gaussian_mixture_tr_te.csv', index= False)
 
-X_train = tr_pca.values
-X_test = te_pca.values
-output_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
-
-
-del (df, train, test, X, X_te)
-gc.collect()
-
-
-kernels = ['linear', 'poly']
-
-for kernel in kernels:
-    print('Calculating for {} kernel****************', kernel)
-    svc = SVC(kernel=kernel, probability=True)
-    svc_train = svc.fit(X_train, y)
-    svc_X_train_prediction  = svc.predict_proba(X_train)[:, 1]
-    svc_X_test_prediction  = svc.predict_proba(X_test)[:, 1]
-    tr_te_concatenated = np.concatenate([svc_X_train_prediction,svc_X_test_prediction])
-    output_df['pca20_svm_'+ kernel + '_kernel' ] = tr_te_concatenated
-
-print('final tr_te shape', output_df.shape)
-output_df.to_csv('pca20_svm_tr_te.csv', index= False)
-print(output_df.head())
-
-
-
+print(df.head())
 

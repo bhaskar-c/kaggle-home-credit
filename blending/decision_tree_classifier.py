@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
-import gc
+from sklearn.tree import DecisionTreeClassifier
+
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -70,7 +68,6 @@ df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
 df  = norm_scale_it(df)
-df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -78,8 +75,6 @@ test = df[df['TARGET'].isnull()]
 
 train  = train.fillna(df.mean())
 test  = test.fillna(df.mean())
-
-
 
 cols_to_drop = []
 for col in list(df):
@@ -117,55 +112,27 @@ X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
 test_dataset = test.values
-X_te = test_dataset[:,2:]
-print(type(X_te))
-print('X.shape, y.shape, X_te.shape', X.shape, y.shape, X_te.shape)
+X_test = test_dataset[:,2:]
+print(type(X_test))
+print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
+# In[5]:
+df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
+print('DecisionTreeClassifier Begins****************')
+dtc = DecisionTreesClassifier(criterion='entropy', min_samples_split=100, max_features=0.8, random_state=0)
 
-'''
-It is highly recommended to use another dimensionality reduction
- |  method (e.g. PCA for dense data or TruncatedSVD for sparse data)
- |  to reduce the number of dimensions to a reasonable amount (e.g. 50)
-'''
-n_components = 20
-pca = PCA(n_components=n_components)
-principalComponents = pca.fit_transform(X)
-col_names  = ["pc" + str(col+1) for col in range(n_components)]
-tr_pca  = pd.DataFrame(data = principalComponents, columns = col_names)
-te_pca_np = pca.transform(X_te)
-te_pca  = pd.DataFrame(data = te_pca_np, columns = col_names)
-print('tr_pca shape*****', tr_pca.shape)
-print(tr_pca.head())
+print('fit****************')
+dtc_train = dtc.fit(X, y)
+dtc_X_prediction  = dtc.predict_proba(X)[:, 1]
+dtc_X_test_prediction  = dtc.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([dtc_X_prediction, dtc_X_test_prediction])
+df['decision_tree_classifier'] = tr_te_concatenated
 
-print('te_pca shape*****', te_pca.shape)
-print(te_pca.head())
+print('final tr_te shape', df.shape)
+print(df.head())
 
-X_train = tr_pca.values
-X_test = te_pca.values
-output_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
-
-
-del (df, train, test, X, X_te)
-gc.collect()
-
-
-kernels = ['linear', 'poly']
-
-for kernel in kernels:
-    print('Calculating for {} kernel****************', kernel)
-    svc = SVC(kernel=kernel, probability=True)
-    svc_train = svc.fit(X_train, y)
-    svc_X_train_prediction  = svc.predict_proba(X_train)[:, 1]
-    svc_X_test_prediction  = svc.predict_proba(X_test)[:, 1]
-    tr_te_concatenated = np.concatenate([svc_X_train_prediction,svc_X_test_prediction])
-    output_df['pca20_svm_'+ kernel + '_kernel' ] = tr_te_concatenated
-
-print('final tr_te shape', output_df.shape)
-output_df.to_csv('pca20_svm_tr_te.csv', index= False)
-print(output_df.head())
-
-
+df.to_csv('decision_tree_classifier_tr_te.csv', index= False)
 
 

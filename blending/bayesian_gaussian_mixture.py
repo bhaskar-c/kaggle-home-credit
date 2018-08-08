@@ -124,7 +124,7 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
 print('BayesianGaussianMixture begins****************')
-bgm = BayesianGaussianMixture(n_components=3)
+bgm = BayesianGaussianMixture(n_components=2)
 print('fitting****************')
 bgm_train = bgm.fit(X, y)
 print('predicting****************')
