@@ -1,17 +1,7 @@
-### FINALIZED
 import numpy as np
 import pandas as pd
-import gc
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import StratifiedKFold, KFold
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.mixture import GaussianMixture
 
-
-
-from sklearn.ensemble import BaggingClassifier
-from sklearn.tree import DecisionTreeClassifier
 
 
 
@@ -52,16 +42,36 @@ def min_max_scale_it(df):
     return df
 
 
+def norm_scale_it(df):
+    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
+    for col in cols:
+        try:
+            df[col]  = df[col].fillna(df[col].mean())
+            df[col] = (df[col] - df[col].mean()) / (df[col].max() - df[col].min())
+        except:
+            pass
+    return df
+
+# fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
 
 
+# In[2]:
+
+
 df = read_csv_data('shiv', debug=False)
+
+
+# In[ ]:
+
+
+# impute and scale
 df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-df  = min_max_scale_it(df)
+df  = norm_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -86,41 +96,46 @@ for col in list(df):
 
 train.drop(cols_to_drop, axis=1, inplace=True)
 test.drop(cols_to_drop, axis=1, inplace=True)
-print(cols_to_drop, 'cols_to_drop')
+test = test.reset_index(drop=True)
+print(test.head())
+print(test.shape)
+#print(cols_to_drop, 'cols_to_drop')
 print(train.shape, test.shape)
 train_dataset = train.values
 X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
-print(X)
+#print(X)
 
+
+# In[4]:
+
+
+train_dataset = train.values
+X = train_dataset[:,2:]
+y = train_dataset[:,1]
+y=y.astype('int')
 test_dataset = test.values
 X_test = test_dataset[:,2:]
 print(type(X_test))
+print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
-print(X.shape, y.shape, X_test.shape)
-output_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
+# In[5]:
+df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-del df
-gc.collect()
+print('GaussianMixture begins****************')
+gm = GaussianMixture(n_components=2)
+print('fitting****************')
+gm_train = gm.fit(X, y)
+print('predicting****************')
+gm_X_prediction  = gm.predict_proba(X)[:, 1]
+gm_X_test_prediction  = gm.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([gm_X_prediction,gm_X_test_prediction])
+df['gaussian_mixture'] = tr_te_concatenated
 
+print('final tr_te shape', df.shape)
+df.to_csv('gaussian_mixture_tr_te.csv', index= False)
 
-# In[34]:
-# https://www.kaggle.com/aharless/simple-ffnn-from-dromosys-features
+print(df.head())
 
-print( 'Setting up BAGGINGClassifier...' )
-bc = BaggingClassifier(DecisionTreeClassifier(max_depth=6), n_estimators=1000, max_samples=1000, max_features=0.3, oob_score=True, random_state=0)
-print( 'Fitting ...' )
-bc.fit(X, y)
-bc_X_prediction  = bc.predict_proba(X)[:, 1]
-bc_X_test_prediction  = bc.predict_proba(X_test)[:, 1]
-tr_te_concatenated = np.concatenate([bc_X_prediction, bc_X_test_prediction])
-output_df['bagging_classifier'] = tr_te_concatenate
-
-print('final tr_te shape', output_df.shape)
-print(output_df.head())
-
-output_df.to_csv('bagging_classifier_tr_te.csv', index= False)
-
-print( output_df.head() )

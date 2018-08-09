@@ -1,6 +1,18 @@
+### FINALIZED
 import numpy as np
 import pandas as pd
+import gc
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
+
+
+from sklearn.ensemble import BaggingClassifier
 from sklearn.tree import DecisionTreeClassifier
+
 
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
@@ -17,6 +29,7 @@ def read_csv_data(file_name, debug, server=True, num_rows=200):
         if str(df[col].dtype) == 'category':
             df[col] = df[col].astype('object')
     return df
+
 def label_encode_it(df):
     encode_these_columns = []
     for col in list(df):
@@ -27,6 +40,7 @@ def label_encode_it(df):
             df[col] = df[col].astype('category').cat.codes
     print(encode_these_columns, '**********')
     return df
+
 def min_max_scale_it(df):
     cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
     for col in cols:
@@ -38,36 +52,16 @@ def min_max_scale_it(df):
     return df
 
 
-def norm_scale_it(df):
-    cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-    for col in cols:
-        try:
-            df[col]  = df[col].fillna(df[col].mean())
-            df[col] = (df[col] - df[col].mean()) / (df[col].max() - df[col].min())
-        except:
-            pass
-    return df
-
-# fix random seed for reproducibility
 seed = 7
 np.random.seed(seed)
 
 
-# In[2]:
-
-
 df = read_csv_data('shiv', debug=False)
-
-
-# In[ ]:
-
-
-# impute and scale
 df = df.replace(-np.inf, np.nan)
 df = df.replace(np.inf, np.nan)
 
 cols = [col for col in df.columns if col not in ['TARGET', 'SK_ID_CURR']]
-df  = norm_scale_it(df)
+df  = min_max_scale_it(df)
 df[cols] = label_encode_it(df[cols])
 
 train = df[df['TARGET'].notnull()]
@@ -92,47 +86,41 @@ for col in list(df):
 
 train.drop(cols_to_drop, axis=1, inplace=True)
 test.drop(cols_to_drop, axis=1, inplace=True)
-test = test.reset_index(drop=True)
-print(test.head())
-print(test.shape)
-#print(cols_to_drop, 'cols_to_drop')
+print(cols_to_drop, 'cols_to_drop')
 print(train.shape, test.shape)
 train_dataset = train.values
 X = train_dataset[:,2:]
 y = train_dataset[:,1]
 y=y.astype('int')
-#print(X)
+print(X)
 
-
-# In[4]:
-
-
-train_dataset = train.values
-X = train_dataset[:,2:]
-y = train_dataset[:,1]
-y=y.astype('int')
 test_dataset = test.values
 X_test = test_dataset[:,2:]
 print(type(X_test))
-print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
-# In[5]:
-df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
+print(X.shape, y.shape, X_test.shape)
+output_df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-print('DecisionTreeClassifier Begins****************')
-dtc = DecisionTreesClassifier(criterion='entropy', min_samples_split=100, max_features=0.8, random_state=0)
-
-print('fit****************')
-dtc_train = dtc.fit(X, y)
-dtc_X_prediction  = dtc.predict_proba(X)[:, 1]
-dtc_X_test_prediction  = dtc.predict_proba(X_test)[:, 1]
-tr_te_concatenated = np.concatenate([dtc_X_prediction, dtc_X_test_prediction])
-df['decision_tree_classifier'] = tr_te_concatenated
-
-print('final tr_te shape', df.shape)
-print(df.head())
-
-df.to_csv('decision_tree_classifier_tr_te.csv', index= False)
+del df
+gc.collect()
 
 
+# In[34]:
+# https://www.kaggle.com/aharless/simple-ffnn-from-dromosys-features
+
+print( 'Setting up BAGGINGClassifier...' )
+bc = BaggingClassifier(DecisionTreeClassifier(max_depth=6), n_estimators=1000, max_samples=1000, max_features=0.3, oob_score=True, random_state=0)
+print( 'Fitting ...' )
+bc.fit(X, y)
+bc_X_prediction  = bc.predict_proba(X)[:, 1]
+bc_X_test_prediction  = bc.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([bc_X_prediction, bc_X_test_prediction])
+output_df['bagging_classifier'] = tr_te_concatenated
+
+print('final tr_te shape', output_df.shape)
+
+
+output_df.to_csv('bagging_classifier_tr_te.csv', index= False)
+
+print( output_df.head() )

@@ -116,7 +116,7 @@ abc.fit(X, y)
 abc_X_prediction  = abc.predict_proba(X)[:, 1]
 abc_X_test_prediction  = abc.predict_proba(X_test)[:, 1]
 tr_te_concatenated = np.concatenate([abc_X_prediction, abc_X_test_prediction])
-output_df['adaboost_classifier'] = tr_te_concatenate
+output_df['adaboost_classifier'] = tr_te_concatenated
 
 print('final tr_te shape', output_df.shape)
 print(output_df.head())

@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.mixture import GaussianMixture
-
-
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
@@ -121,23 +119,22 @@ print(type(X_test))
 print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 
-# In[5]:
+
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-print('GaussianMixture begins****************')
-gm = GaussianMixture(n_components=2)
+print('QuadraticDiscriminantAnalysis****************')
+qda = QuadraticDiscriminantAnalysis()
 print('fitting****************')
-gm_train = gm.fit(X, y)
-print('predicting****************')
-gm_X_prediction  = gm.predict_proba(X)[:, 1]
-gm_X_test_prediction  = gm.predict_proba(X_test)[:, 1]
-tr_te_concatenated = np.concatenate([gm_X_prediction,gm_X_test_prediction])
-df['gaussian_mixture'] = tr_te_concatenated
+qda_train = qda.fit(X, y)
+print('predicting on train****************')
+qda_X_prediction  = qda.predict_proba(X)[:, 1]
+print('predicting on test****************')
+qda_X_test_prediction  = qda.predict_proba(X_test)[:, 1]
+tr_te_concatenated = np.concatenate([qda_X_prediction,qda_X_test_prediction])
+df['quadratic_discriminant_analysis'] = tr_te_concatenated
+
 
 print('final tr_te shape', df.shape)
-print(df.head())
-
-df.to_csv('gaussian_mixture_tr_te.csv', index= False)
-
+df.to_csv('quadratic_discriminant_analysis_tr_te.csv', index= False)
 print(df.head())
 

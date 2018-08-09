@@ -22,7 +22,16 @@ def one_hot_encode_it(df, nan_as_category = False, exclude_columns=[]):
     df = pd.get_dummies(df, columns= encode_these_coumns, dummy_na= nan_as_category)
     return df
 
-
+def label_encode_it(df):
+    encode_these_columns = []
+    for col in list(df):
+        if col == 'TARGET':
+            continue
+        if str(df[col].dtype) in ['object', 'category']:
+            encode_these_columns.append(col)
+            df[col] = df[col].astype('category').cat.codes
+    print(encode_these_columns, '**********')
+    return df
 
 def read_csv_data(file_name, debug, server=True, num_rows=200):
     if server:
@@ -56,7 +65,7 @@ class OurLightGBM:
     self.num_folds = 5
     #self.training_params = ['number_boosting_rounds', 'early_stopping_rounds']
     self.params = {  'objective': 'binary', 'metric': 'auc','nthread': 4, #'boost_from_average':False,
-            'n_estimators':10000, 'learning_rate':1,
+            'n_estimators':10000, 'learning_rate':0.01,
             'max_depth': -1, 'num_leaves':32, 'max_bin': 25,
             'feature_fraction': 0.80, 'bagging_fraction':0.7, 'bagging_freq': 1,
             'reg_alpha':3, 'reg_lambda':3,
