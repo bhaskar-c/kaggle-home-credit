@@ -121,7 +121,7 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-kernels = ['knn', 'rbf']
+kernels = ['knn'] #'rbf'] - taking too much time on knn
 
 for kernel in kernels:
     print('LabelSpreading kernel****************', kernel)

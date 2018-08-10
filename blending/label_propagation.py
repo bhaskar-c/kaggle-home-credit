@@ -123,7 +123,7 @@ print('X.shape, y.shape, X_test.shape', X.shape, y.shape, X_test.shape)
 # In[5]:
 df = pd.DataFrame({"SK_ID_CURR": df['SK_ID_CURR']})
 
-kernels = ['knn', 'rbf']
+kernels = ['knn',] #, 'rbf'] - taking too much time on knn - so only one model
 
 for kernel in kernels:
     print('label_propagation begins on kernel****************', kernel)
